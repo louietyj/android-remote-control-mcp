@@ -63,7 +63,7 @@ class ShellUserService : IShellService.Stub() {
             process.destroyForcibly()
             process.waitFor(KILL_GRACE_MS, TimeUnit.MILLISECONDS)
         }
-        // A background job can hold the pipes open indefinitely; don't wait for it.
+        // A backgrounded grandchild can hold the pipes open indefinitely; don't wait for it.
         val readerDeadline = System.currentTimeMillis() + READER_GRACE_MS
         readers.forEach { it.join((readerDeadline - System.currentTimeMillis()).coerceAtLeast(1)) }
 
