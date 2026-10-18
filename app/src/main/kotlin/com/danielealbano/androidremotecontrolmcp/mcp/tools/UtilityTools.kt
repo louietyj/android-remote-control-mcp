@@ -73,7 +73,7 @@ class GetClipboardTool
                     buildJsonObject {
                         put("text", privacyToolGate.text(text, "clipboard"))
                     }
-                McpToolUtils.untrustedTextResult(Json.encodeToString(resultJson))
+                McpToolUtils.textResult(Json.encodeToString(resultJson))
             } catch (e: McpToolException) {
                 throw e
             } catch (
@@ -279,7 +279,7 @@ class WaitForNodeTool
                                     put("attempts", attemptCount)
                                     put("node", McpToolUtils.buildNodeJson(redactedElement))
                                 }
-                            return McpToolUtils.untrustedTextResult(Json.encodeToString(resultJson))
+                            return McpToolUtils.textResult(Json.encodeToString(resultJson))
                         }
                         // Node disappeared between raw check and full parse — continue polling
                         Log.d(TAG, "wait_for_node: raw check found match but full parse did not, retrying")
@@ -305,7 +305,7 @@ class WaitForNodeTool
                             "(by=$byStr, value='$value'). Retry if the operation is long-running.",
                     )
                 }
-            return McpToolUtils.untrustedTextResult(Json.encodeToString(timeoutJson))
+            return McpToolUtils.textResult(Json.encodeToString(timeoutJson))
         }
 
         fun register(
@@ -569,7 +569,7 @@ class WaitForIdleTool
                                         put("elapsedMs", elapsed)
                                         put("similarity", similarity)
                                     }
-                                return McpToolUtils.untrustedTextResult(Json.encodeToString(resultJson))
+                                return McpToolUtils.textResult(Json.encodeToString(resultJson))
                             }
                         } else {
                             consecutiveIdleChecks = 0
@@ -598,7 +598,7 @@ class WaitForIdleTool
                     put("elapsedMs", elapsed)
                     put("similarity", lastSimilarity)
                 }
-            return McpToolUtils.untrustedTextResult(Json.encodeToString(resultJson))
+            return McpToolUtils.textResult(Json.encodeToString(resultJson))
         }
 
         private fun generateCurrentFingerprint(): IntArray =
@@ -768,7 +768,7 @@ class GetNodeDetailsTool
 
             Log.d(TAG, "get_node_details: node_ids=${ids.size}")
 
-            return McpToolUtils.untrustedTextResult(sb.toString().trimEnd('\n'))
+            return McpToolUtils.textResult(sb.toString().trimEnd('\n'))
         }
 
         /**

@@ -69,7 +69,7 @@ class ListStorageLocationsHandler
                             )
                         }
                     }
-                McpToolUtils.untrustedTextResult(Json.encodeToString(jsonArray))
+                McpToolUtils.textResult(Json.encodeToString(jsonArray))
             } catch (e: McpToolException) {
                 throw e
             } catch (e: Exception) {
@@ -165,7 +165,7 @@ class ListFilesHandler
                         put("has_more", result.hasMore)
                     }
 
-                McpToolUtils.untrustedTextResult(Json.encodeToString(resultJson))
+                McpToolUtils.textResult(Json.encodeToString(resultJson))
             } catch (e: McpToolException) {
                 throw e
             } catch (e: Exception) {
@@ -269,7 +269,7 @@ class ReadFileHandler
                         }
                     }
 
-                McpToolUtils.untrustedTextResult(text)
+                McpToolUtils.textResult(text)
             } catch (e: McpToolException) {
                 throw e
             } catch (e: Exception) {

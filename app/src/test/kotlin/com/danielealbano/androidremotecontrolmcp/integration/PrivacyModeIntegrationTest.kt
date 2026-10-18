@@ -13,7 +13,6 @@ import com.danielealbano.androidremotecontrolmcp.data.model.PlaceholderFormat
 import com.danielealbano.androidremotecontrolmcp.data.model.PrivacyModeConfig
 import com.danielealbano.androidremotecontrolmcp.data.model.RedactionMode
 import com.danielealbano.androidremotecontrolmcp.data.model.ScreenshotData
-import com.danielealbano.androidremotecontrolmcp.mcp.tools.stripUntrustedWarning
 import com.danielealbano.androidremotecontrolmcp.privacy.PiiCategory
 import com.danielealbano.androidremotecontrolmcp.privacy.PiiDetection
 import com.danielealbano.androidremotecontrolmcp.privacy.PrivacyModeStatus
@@ -262,7 +261,7 @@ class PrivacyModeIntegrationTest {
                 val result = client.callTool(name = "android_get_clipboard", arguments = emptyMap())
                 assertNotEquals(true, result.isError)
                 val text = (result.content[0] as TextContent).text
-                val parsed = Json.parseToJsonElement(stripUntrustedWarning(text)).jsonObject
+                val parsed = Json.parseToJsonElement(text).jsonObject
                 val clip = parsed["text"]?.jsonPrimitive?.content ?: ""
                 assertTrue(clip.contains("EMAIL#"))
                 assertFalse(clip.contains("john@example.com"))

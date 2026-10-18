@@ -49,7 +49,7 @@ class ShellHandler
                     put("uid", shell.uid)
                 }
 
-            return McpToolUtils.untrustedTextResult(jsonResult.toString())
+            return McpToolUtils.textResult(jsonResult.toString())
         }
 
         private fun requireCommand(arguments: JsonObject?): String {

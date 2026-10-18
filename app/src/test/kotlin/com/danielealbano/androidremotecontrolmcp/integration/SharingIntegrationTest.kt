@@ -9,7 +9,6 @@ import com.danielealbano.androidremotecontrolmcp.mcp.auth.McpAuthPlugin
 import com.danielealbano.androidremotecontrolmcp.mcp.contentTypeOrOctetStream
 import com.danielealbano.androidremotecontrolmcp.mcp.installMcpStatelessTransport
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.LoggedToolRegistrar
-import com.danielealbano.androidremotecontrolmcp.mcp.tools.McpToolUtils
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerSharingTools
 import com.danielealbano.androidremotecontrolmcp.services.sharing.EphemeralFileLinkService
 import com.danielealbano.androidremotecontrolmcp.services.sharing.EphemeralFileLinkServiceImpl
@@ -90,7 +89,7 @@ class SharingIntegrationTest {
     }
 
     @Test
-    @DisplayName("text item: warning first, text inline, inbox emptied")
+    @DisplayName("text item: text inline, inbox emptied")
     fun textItem() =
         runTest {
             val inbox = newInbox()
@@ -99,9 +98,8 @@ class SharingIntegrationTest {
 
             runSharingApp(inbox, linkService) { client, _ ->
                 val result = client.callTool(name = "get_shared_content", arguments = emptyMap())
-                assertEquals(2, result.content.size)
-                assertWarningFirst(result.content)
-                assertEquals("hello from share", (result.content[1] as TextContent).text)
+                assertEquals(1, result.content.size)
+                assertEquals("hello from share", (result.content[0] as TextContent).text)
 
                 // Consume-on-read: a second call drains nothing and returns the empty-inbox guidance.
                 val second = client.callTool(name = "get_shared_content", arguments = emptyMap())
@@ -110,7 +108,7 @@ class SharingIntegrationTest {
         }
 
     @Test
-    @DisplayName("image: warning first, then ImageContent, then URL text with user-only flag")
+    @DisplayName("image: ImageContent, then URL text with user-only flag")
     fun imageItem() =
         runTest {
             val inbox = newInbox()
@@ -119,11 +117,10 @@ class SharingIntegrationTest {
 
             runSharingApp(inbox, linkService) { client, _ ->
                 val result = client.callTool(name = "get_shared_content", arguments = emptyMap())
-                assertWarningFirst(result.content)
-                val image = result.content[1] as ImageContent
+                val image = result.content[0] as ImageContent
                 assertEquals(INLINE_IMAGE_BASE64, image.data)
                 assertEquals("image/png", image.mimeType)
-                val urlText = (result.content[2] as TextContent).text
+                val urlText = (result.content[1] as TextContent).text
                 assertTrue(urlText.contains("/s/"), "must contain a capability URL")
                 assertTrue(urlText.contains("Only share this URL"), "must flag the URL as user-only")
             }
@@ -140,8 +137,7 @@ class SharingIntegrationTest {
 
             runSharingApp(inbox, linkService) { client, httpClient ->
                 val result = client.callTool(name = "get_shared_content", arguments = emptyMap())
-                assertWarningFirst(result.content)
-                val urlText = (result.content[1] as TextContent).text
+                val urlText = (result.content[0] as TextContent).text
                 assertTrue(urlText.contains("web_fetch"), "file note must mention web_fetch")
                 val token = TOKEN_REGEX.find(urlText)?.groupValues?.get(1)
                 assertTrue(token != null, "URL must contain a token")
@@ -163,8 +159,7 @@ class SharingIntegrationTest {
 
             runSharingApp(inbox, linkService) { client, _ ->
                 val result = client.callTool(name = "get_shared_content", arguments = emptyMap())
-                assertWarningFirst(result.content)
-                val text = (result.content[1] as TextContent).text
+                val text = (result.content[0] as TextContent).text
                 assertTrue(text.contains(json), "textual file content must be inlined")
                 assertFalse(text.contains("/s/"), "a textual file must NOT be served as a capability URL")
             }
@@ -181,7 +176,7 @@ class SharingIntegrationTest {
 
             runSharingApp(inbox, linkService) { client, httpClient ->
                 val result = client.callTool(name = "get_shared_content", arguments = emptyMap())
-                val token = TOKEN_REGEX.find((result.content[1] as TextContent).text)!!.groupValues[1]
+                val token = TOKEN_REGEX.find((result.content[0] as TextContent).text)!!.groupValues[1]
 
                 val response = httpClient.get("/s/$token")
                 assertEquals(HttpStatusCode.OK, response.status)
@@ -253,7 +248,6 @@ class SharingIntegrationTest {
                     )
                 assertNotEquals(true, result.isError)
                 val text = (result.content[0] as TextContent).text
-                assertTrue(text.startsWith(McpToolUtils.UNTRUSTED_CONTENT_WARNING), "warning must be first")
                 val token = TOKEN_REGEX.find(text)?.groupValues?.get(1)
                 assertTrue(token != null, "result must contain a capability URL")
 
@@ -432,10 +426,6 @@ class SharingIntegrationTest {
                     capabilities = ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = false)),
                 ),
         )
-
-    private fun assertWarningFirst(content: List<Any>) {
-        assertEquals(McpToolUtils.UNTRUSTED_CONTENT_WARNING, (content[0] as TextContent).text)
-    }
 
     private data class SharingTestConfig(
         val fileOperationProvider: FileOperationProvider = mockk(relaxed = true),

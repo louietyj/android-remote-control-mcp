@@ -116,7 +116,7 @@ class E2EStoragePartialAccessTest {
     private fun storageLocationsById(): Map<String, JsonObject> = runBlocking {
         val result = mcpClient.callTool("${TOOL_PREFIX}list_storage_locations", emptyMap())
         assertNotEquals(true, result.isError, "list_storage_locations failed")
-        Json.parseToJsonElement(stripUntrustedWarning(toolText(result)))
+        Json.parseToJsonElement(toolText(result))
             .jsonArray.map { it.jsonObject }
             .associateBy { it["id"]!!.jsonPrimitive.content }
     }
@@ -138,7 +138,7 @@ class E2EStoragePartialAccessTest {
             mapOf("location_id" to PICTURES, "path" to FIXTURE_DIR, "offset" to 0, "limit" to 200),
         )
         assertNotEquals(true, result.isError, "list_files failed: ${toolText(result)}")
-        Json.parseToJsonElement(stripUntrustedWarning(toolText(result))).jsonObject["files"]!!
+        Json.parseToJsonElement(toolText(result)).jsonObject["files"]!!
             .jsonArray.map { it.jsonObject["name"]!!.jsonPrimitive.content }
     }
 
@@ -148,7 +148,7 @@ class E2EStoragePartialAccessTest {
             mapOf("location_id" to PICTURES, "path" to path),
         )
         assertNotEquals(true, result.isError, "read_file failed: ${toolText(result)}")
-        stripUntrustedWarning(toolText(result))
+        toolText(result)
             .lines()
             .filterNot { it.startsWith("--- More lines available") }
             .joinToString("\n") { it.replace(Regex("^\\d+\\| "), "") }

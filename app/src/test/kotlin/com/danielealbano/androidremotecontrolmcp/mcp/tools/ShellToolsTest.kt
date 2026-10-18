@@ -76,20 +76,14 @@ class ShellToolsTest {
         timeoutMs?.let { put("timeout_ms", it) }
     }
 
-    private fun parse(text: String): JsonObject {
-        val body = text.removePrefix(McpToolUtils.UNTRUSTED_CONTENT_WARNING).trim()
-        return Json.parseToJsonElement(body).jsonObject
-    }
+    private fun parse(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
 
     @Test
-    fun `returns JSON with all fields behind untrusted warning`() =
+    fun `returns JSON with all fields`() =
         runTest {
             coEvery { shellExecutor.exec("id", ShellHandler.DEFAULT_TIMEOUT_MS) } returns Result.success(okResult)
 
-            val text = (handler.execute(args()).content[0] as TextContent).text
-
-            assertTrue(text.startsWith(McpToolUtils.UNTRUSTED_CONTENT_WARNING))
-            val json = parse(text)
+            val json = parse((handler.execute(args()).content[0] as TextContent).text)
             assertEquals(0, json["exit_code"]!!.jsonPrimitive.int)
             assertEquals("uid=2000(shell)\n", json["stdout"]!!.jsonPrimitive.content)
             assertEquals("", json["stderr"]!!.jsonPrimitive.content)

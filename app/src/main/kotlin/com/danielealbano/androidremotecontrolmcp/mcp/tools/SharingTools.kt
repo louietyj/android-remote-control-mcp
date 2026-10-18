@@ -29,8 +29,7 @@ import kotlinx.serialization.json.putJsonObject
  * MCP tool handler for `get_shared_content`.
  *
  * Drains the [SharedContentInbox] (consume-on-read) and returns each item: text inline; images as a
- * downscaled [ImageContent] plus a full-res capability URL; other files as a capability URL. The
- * untrusted-content warning is the first content block (device-derived content).
+ * downscaled [ImageContent] plus a full-res capability URL; other files as a capability URL.
  */
 class GetSharedContentHandler(
     private val inbox: SharedContentInbox,
@@ -41,7 +40,7 @@ class GetSharedContentHandler(
     suspend fun execute(): CallToolResult {
         val items = inbox.drainAll()
         if (items.isEmpty()) {
-            return McpToolUtils.untrustedTextResult(
+            return McpToolUtils.textResult(
                 "note:no shared content available. Share text/an image/a file to this app, then call this tool.",
             )
         }
@@ -59,7 +58,7 @@ class GetSharedContentHandler(
             content[contentIndex] = TextContent(text = redacted[batchIndex].orEmpty())
         }
 
-        return McpToolUtils.untrustedResult(content)
+        return CallToolResult(content = content)
     }
 
     /** Appends the rendering of [item] to [content]. */
@@ -172,8 +171,8 @@ class GetSharedContentHandler(
  * MCP tool handler for `share_file_via_web`.
  *
  * Reads an existing device file (via the authorized-location model) into memory, registers it as a
- * capability link, and returns a temporary fetch URL plus metadata. The untrusted-content warning is
- * included because the filename/MIME are device-derived. Files larger than the configured limit are rejected.
+ * capability link, and returns a temporary fetch URL plus metadata. Files larger than the configured limit
+ * are rejected.
  */
 class ShareFileViaWebHandler(
     private val fileOperationProvider: FileOperationProvider,
@@ -195,7 +194,7 @@ class ShareFileViaWebHandler(
         val message =
             "File '$displayName' ${result.mimeType} (${result.sizeBytes} bytes) at $url " +
                 "(expires 1h). web_fetch can read text/PDF; other types are download-only."
-        return McpToolUtils.untrustedTextResult(message)
+        return McpToolUtils.textResult(message)
     }
 
     @Suppress("TooGenericExceptionCaught")

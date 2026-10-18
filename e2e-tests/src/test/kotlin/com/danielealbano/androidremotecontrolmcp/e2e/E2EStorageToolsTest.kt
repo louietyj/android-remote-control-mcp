@@ -120,7 +120,7 @@ class E2EStorageToolsTest {
             mapOf("location_id" to locationId, "path" to path, "offset" to offset, "limit" to limit),
         )
         assertNotEquals(true, result.isError, "list_files failed: ${toolText(result)}")
-        Json.parseToJsonElement(stripUntrustedWarning(toolText(result))).jsonObject
+        Json.parseToJsonElement(toolText(result)).jsonObject
     }
 
     private fun fileNames(listing: JsonObject): List<String> =
@@ -150,7 +150,7 @@ class E2EStorageToolsTest {
             mapOf("location_id" to locationId, "path" to path),
         )
         assertNotEquals(true, result.isError, "read_file failed: ${toolText(result)}")
-        stripUntrustedWarning(toolText(result))
+        toolText(result)
             .lines()
             .filterNot { it.startsWith("--- More lines available") }
             .joinToString("\n") { it.replace(Regex("^\\d+\\| "), "") }
@@ -172,8 +172,7 @@ class E2EStorageToolsTest {
         val result = mcpClient.callTool("${TOOL_PREFIX}list_storage_locations", emptyMap())
         assertNotEquals(true, result.isError)
         val raw = toolText(result)
-        assertNotEquals(raw, stripUntrustedWarning(raw), "response must begin with the untrusted warning")
-        val locations = Json.parseToJsonElement(stripUntrustedWarning(raw)).jsonArray.map { it.jsonObject }
+        val locations = Json.parseToJsonElement(raw).jsonArray.map { it.jsonObject }
         val ids = locations.map { it["id"]!!.jsonPrimitive.content }
         assertEquals(
             listOf(DOWNLOADS, PICTURES, MOVIES, MUSIC, DCIM, RECORDINGS),

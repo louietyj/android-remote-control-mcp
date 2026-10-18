@@ -137,7 +137,7 @@ class GetNodeDetailsToolTest {
             val result = tool.execute(params)
             val text = (result.content[0] as TextContent).text
 
-            val lines = stripUntrustedWarning(text).lines()
+            val lines = text.lines()
             assertEquals("node_id\ttext\tdesc", lines[0])
             assertEquals("node_a\tHello World\tA button", lines[1])
             assertEquals("node_b\t-\t-", lines[2])
@@ -163,7 +163,7 @@ class GetNodeDetailsToolTest {
             val result = tool.execute(params)
             val text = (result.content[0] as TextContent).text
 
-            val lines = stripUntrustedWarning(text).lines()
+            val lines = text.lines()
             assertEquals("node_a\tHello World\tA button", lines[1])
             assertEquals("node_missing\tnot_found\tnot_found", lines[2])
         }
@@ -181,7 +181,7 @@ class GetNodeDetailsToolTest {
             val result = tool.execute(params)
             val text = (result.content[0] as TextContent).text
 
-            val lines = stripUntrustedWarning(text).lines()
+            val lines = text.lines()
             assertEquals("node_b\t-\t-", lines[1])
         }
 
@@ -206,7 +206,7 @@ class GetNodeDetailsToolTest {
             val result = tool.execute(params)
             val text = (result.content[0] as TextContent).text
 
-            val lines = stripUntrustedWarning(text).lines()
+            val lines = text.lines()
             assertEquals("node_special\tline1 line2 line3\tdesc with tabs", lines[1])
         }
 
@@ -231,7 +231,7 @@ class GetNodeDetailsToolTest {
             val result = tool.execute(params)
             val text = (result.content[0] as TextContent).text
 
-            val lines = stripUntrustedWarning(text).lines()
+            val lines = text.lines()
             assertTrue(lines[1].contains(longText))
         }
 

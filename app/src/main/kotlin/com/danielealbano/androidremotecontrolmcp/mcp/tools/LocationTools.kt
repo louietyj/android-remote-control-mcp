@@ -56,7 +56,7 @@ class GetLocationHandler
                     put("street", redactedStreet)
                 }
 
-            return McpToolUtils.untrustedTextResult(jsonResult.toString())
+            return McpToolUtils.textResult(jsonResult.toString())
         }
 
         fun register(

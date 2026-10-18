@@ -445,7 +445,7 @@ class TypeAppendTextTool
 
             Log.d(TAG, "type_append_text: typed ${text.length} chars on node '$nodeId'")
             val redactedFieldContent = privacyToolGate.text(fieldContent, "field content").orEmpty()
-            return McpToolUtils.untrustedTextResult(
+            return McpToolUtils.textResult(
                 "Typed ${text.length} characters at end of node '$nodeId'.\n" +
                     "Field content: $redactedFieldContent",
             )
@@ -589,7 +589,7 @@ class TypeInsertTextTool
 
             Log.d(TAG, "type_insert_text: typed ${text.length} chars at offset $offset on '$nodeId'")
             val redactedFieldContent = privacyToolGate.text(fieldContent, "field content").orEmpty()
-            return McpToolUtils.untrustedTextResult(
+            return McpToolUtils.textResult(
                 "Typed ${text.length} characters at offset $offset in node '$nodeId'.\n" +
                     "Field content: $redactedFieldContent",
             )
@@ -798,7 +798,7 @@ class TypeReplaceTextTool
                     "with ${newText.length} chars on '$nodeId'",
             )
             val redactedFieldContent = privacyToolGate.text(fieldContent, "field content").orEmpty()
-            return McpToolUtils.untrustedTextResult(
+            return McpToolUtils.textResult(
                 "Replaced ${search.length} characters with ${newText.length} characters in node '$nodeId'.\n" +
                     "Field content: $redactedFieldContent",
             )
@@ -925,7 +925,7 @@ class TypeClearTextTool
                     val textLength = surroundingText?.let { it.offset + it.text.length } ?: 0
                     if (textLength == 0) {
                         Log.d(TAG, "type_clear_text: field already empty on '$nodeId'")
-                        return McpToolUtils.untrustedTextResult(
+                        return McpToolUtils.textResult(
                             "Text cleared from node '$nodeId'.\nField content: ",
                         )
                     }
@@ -961,7 +961,7 @@ class TypeClearTextTool
 
             Log.d(TAG, "type_clear_text: cleared text on node '$nodeId'")
             val redactedFieldContent = privacyToolGate.text(fieldContent, "field content").orEmpty()
-            return McpToolUtils.untrustedTextResult(
+            return McpToolUtils.textResult(
                 "Text cleared from node '$nodeId'.\nField content: $redactedFieldContent",
             )
         }

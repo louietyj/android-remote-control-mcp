@@ -83,7 +83,7 @@ class GetScreenStateHandler
             return if (isFresh) {
                 handleFreshRequest(includeScreenshot)
             } else {
-                McpToolUtils.untrustedTextResult(buildPagedText(cursorElement, includeScreenshot))
+                McpToolUtils.textResult(buildPagedText(cursorElement, includeScreenshot))
             }
         }
 
@@ -115,7 +115,7 @@ class GetScreenStateHandler
             return if (includeScreenshot) {
                 buildScreenshotResult(result, screenInfo, compactOutput, processed.flaggedBounds)
             } else {
-                McpToolUtils.untrustedTextResult(compactOutput)
+                McpToolUtils.textResult(compactOutput)
             }
         }
 
@@ -229,7 +229,7 @@ class GetScreenStateHandler
                         ScreenCaptureProvider.DEFAULT_QUALITY,
                     )
 
-                return McpToolUtils.untrustedTextAndImageResult(
+                return McpToolUtils.textAndImageResult(
                     compactOutput,
                     screenshotData.data,
                     "image/jpeg",

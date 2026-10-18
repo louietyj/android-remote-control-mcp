@@ -6,7 +6,6 @@ import com.danielealbano.androidremotecontrolmcp.data.model.PhotoResolution
 import com.danielealbano.androidremotecontrolmcp.data.model.ScreenshotData
 import com.danielealbano.androidremotecontrolmcp.data.model.VideoResolution
 import com.danielealbano.androidremotecontrolmcp.mcp.McpToolException
-import com.danielealbano.androidremotecontrolmcp.mcp.tools.stripUntrustedWarning
 import com.danielealbano.androidremotecontrolmcp.services.camera.VideoRecordingResult
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -81,7 +80,7 @@ class CameraToolsIntegrationTest {
                     )
                 assertNotEquals(true, result.isError)
                 val text = (result.content[0] as TextContent).text
-                assertEquals("[]", stripUntrustedWarning(text))
+                assertEquals("[]", text)
             }
         }
 
@@ -210,8 +209,8 @@ class CameraToolsIntegrationTest {
                         arguments = mapOf("camera_id" to "0"),
                     )
                 assertNotEquals(true, result.isError)
-                assertEquals(2, result.content.size)
-                val imageContent = result.content[1] as ImageContent
+                assertEquals(1, result.content.size)
+                val imageContent = result.content[0] as ImageContent
                 assertEquals("base64imagedata", imageContent.data)
                 assertEquals("image/jpeg", imageContent.mimeType)
             }

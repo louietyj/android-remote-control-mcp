@@ -183,7 +183,7 @@ class ScreenIntrospectionToolsTest {
 
                 assertEquals(1, result.content.size)
                 val textContent = result.content[0] as TextContent
-                assertEquals(sampleCompactOutput, stripUntrustedWarning(textContent.text))
+                assertEquals(sampleCompactOutput, textContent.text)
             }
 
         @Test
@@ -242,7 +242,7 @@ class ScreenIntrospectionToolsTest {
 
                 assertEquals(2, result.content.size)
                 val textContent = result.content[0] as TextContent
-                assertEquals(sampleCompactOutput, stripUntrustedWarning(textContent.text))
+                assertEquals(sampleCompactOutput, textContent.text)
                 val imageContent = result.content[1] as ImageContent
                 assertEquals("base64data", imageContent.data)
                 assertEquals("image/jpeg", imageContent.mimeType)
@@ -410,7 +410,7 @@ class ScreenIntrospectionToolsTest {
 
                 assertEquals(1, result.content.size)
                 val textContent = result.content[0] as TextContent
-                assertEquals(degradedOutput, stripUntrustedWarning(textContent.text))
+                assertEquals(degradedOutput, textContent.text)
 
                 @Suppress("DEPRECATION")
                 verify(exactly = 0) { fallbackRootNode.recycle() }

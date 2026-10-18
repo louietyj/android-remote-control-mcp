@@ -164,22 +164,6 @@ class LocationToolsTest {
             }
 
         @Test
-        fun `get_location result contains untrusted content warning`() =
-            runTest {
-                coEvery {
-                    mockLocationProvider.getLocation(any())
-                } returns
-                    Result.success(
-                        LocationData(37.7749, -122.4194, 10.5f, null),
-                    )
-
-                val result = handler.execute(null, freshFixParamEnabled = true)
-                val text = (result.content[0] as TextContent).text
-
-                assertTrue(text.startsWith(McpToolUtils.UNTRUSTED_CONTENT_WARNING))
-            }
-
-        @Test
         fun `get_location with freshFixParamEnabled false forces freshFix false`() =
             runTest {
                 coEvery {

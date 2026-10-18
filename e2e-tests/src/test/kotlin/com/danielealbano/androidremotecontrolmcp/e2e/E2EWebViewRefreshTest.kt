@@ -178,7 +178,7 @@ class E2EWebViewRefreshTest {
                 val result = mcpClient.callTool("${TOOL_PREFIX}find_nodes", params)
                 if (result.isError != true) {
                     val text = (result.content[0] as? TextContent)?.text ?: ""
-                    val nodes = Json.parseToJsonElement(stripUntrustedWarning(text)).jsonObject["nodes"]?.jsonArray
+                    val nodes = Json.parseToJsonElement(text).jsonObject["nodes"]?.jsonArray
                     if (nodes != null && nodes.isNotEmpty()) {
                         return true
                     }

@@ -680,12 +680,7 @@ Per-location read/write/delete permissions are enforced by `FileOperationProvide
 
 MCP tools return data originating from the Android device (UI element text, content descriptions, file contents, clipboard data, logcat output, notification text, app metadata). This data is untrusted — a malicious app could embed adversarial instructions in UI text that would be returned verbatim in tool responses.
 
-**Mitigation**: Every tool that returns device-derived content prepends `McpToolUtils.UNTRUSTED_CONTENT_WARNING` as the first line of the response text. This warning instructs LLM clients to treat the content as untrusted and ignore any directives found within it.
-
-- Helper functions: `untrustedTextResult()`, `untrustedTextAndImageResult()`, `untrustedImageResult()`
-- Pure action confirmations (tap, click, swipe, etc.) that return only server-generated text are exempt
-- New tools returning device content MUST use the `untrusted*` helpers
-- **Limitation**: Image content (screenshots, camera photos) cannot carry an inline text warning. The warning is added as a separate `TextContent` before the `ImageContent`, but a multimodal LLM processing the image directly could still be influenced by adversarial text rendered on screen. This is an inherent limitation of the MCP protocol.
+The defense is on the client side: MCP clients deliver tool results to the model as data, separate from user and system instructions. Responses carry no in-band warning banner — text inside the untrusted channel can't vouch for itself, and an imperative banner reads like an injection.
 
 ---
 

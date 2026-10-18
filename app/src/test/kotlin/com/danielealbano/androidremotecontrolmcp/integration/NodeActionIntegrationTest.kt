@@ -4,7 +4,6 @@ package com.danielealbano.androidremotecontrolmcp.integration
 
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
-import com.danielealbano.androidremotecontrolmcp.mcp.tools.stripUntrustedWarning
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.AccessibilityNodeData
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.BoundsData
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.ElementInfo
@@ -99,7 +98,7 @@ class NodeActionIntegrationTest {
                 assertTrue(result.content.isNotEmpty())
 
                 val textContent = (result.content[0] as TextContent).text
-                val parsed = Json.parseToJsonElement(stripUntrustedWarning(textContent)).jsonObject
+                val parsed = Json.parseToJsonElement(textContent).jsonObject
                 val elements = parsed["nodes"]!!.jsonArray
                 assertEquals(1, elements.size)
                 assertEquals(
@@ -290,7 +289,7 @@ class NodeActionIntegrationTest {
                         )
                     assertNotEquals(true, result.isError)
                     val textContent = (result.content[0] as TextContent).text
-                    val parsed = Json.parseToJsonElement(stripUntrustedWarning(textContent)).jsonObject
+                    val parsed = Json.parseToJsonElement(textContent).jsonObject
                     val elements = parsed["nodes"]!!.jsonArray
                     assertEquals(1, elements.size)
                     assertEquals(

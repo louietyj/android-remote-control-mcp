@@ -70,7 +70,7 @@ class NotificationListHandler
 
             // Batch-redact every device-derived text field in a single model pass.
             val redacted = privacyToolGate.texts(collectRedactableFields(notifications))
-            return McpToolUtils.untrustedTextResult(buildNotificationsJson(notifications, redacted).toString())
+            return McpToolUtils.textResult(buildNotificationsJson(notifications, redacted).toString())
         }
 
         /** Flattens every device-derived text field (in stable order) for a single batched redaction pass. */
