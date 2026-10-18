@@ -96,7 +96,9 @@ class ShizukuShellExecutor
 
                 if (!ShizukuAccess.isBinderAlive()) {
                     throw ShellUnavailableException(
-                        "Shizuku is not running. Start it in the Shizuku app, then retry.",
+                        "Shizuku is not reachable. Start it in the Shizuku app. If it was (re)started " +
+                            "while this app was running, force-stop and reopen this app: Shizuku only " +
+                            "hands its binder to apps when they start.",
                     )
                 }
                 if (!ShizukuAccess.isPermissionGranted()) {
