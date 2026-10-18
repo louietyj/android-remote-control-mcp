@@ -1,8 +1,11 @@
 package com.danielealbano.androidremotecontrolmcp.services.shell
 
 import android.os.Bundle
+import android.system.ErrnoException
 import android.system.Os
+import android.system.OsConstants
 import java.io.IOException
+import java.io.InputStream
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -29,13 +32,14 @@ class ShellUserService : IShellService.Stub() {
     ): Bundle {
         val process =
             try {
-                ProcessBuilder("sh", "-c", command).start()
+                ProcessBuilder("setsid", "-w", "sh", "-c", PGID_WRAPPER, command).start()
             } catch (e: IOException) {
                 // Binder only marshals a few exception types; IllegalStateException is one of them.
                 throw IllegalStateException("Failed to start sh: ${e.message}", e)
             }
         // No stdin support: give commands that read it an immediate EOF.
         process.outputStream.close()
+        val pgid = readPgid(process.errorStream)
 
         val stdout = CappedOutputCollector(maxOutputBytes)
         val stderr = CappedOutputCollector(maxOutputBytes)
@@ -47,11 +51,21 @@ class ShellUserService : IShellService.Stub() {
 
         val finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
         if (!finished) {
+            // Kill the whole group: sh defers signals while waiting on a foreground child, and
+            // pipeline members / background jobs would otherwise outlive it.
+            if (pgid != null) {
+                try {
+                    Os.kill(-pgid, OsConstants.SIGKILL)
+                } catch (_: ErrnoException) {
+                    // Group already gone.
+                }
+            }
             process.destroyForcibly()
             process.waitFor(KILL_GRACE_MS, TimeUnit.MILLISECONDS)
         }
-        // A backgrounded grandchild can hold the pipes open indefinitely; don't wait for it.
-        readers.forEach { it.join(READER_JOIN_MS) }
+        // A background job can hold the pipes open indefinitely; don't wait for it.
+        val readerDeadline = System.currentTimeMillis() + READER_GRACE_MS
+        readers.forEach { it.join((readerDeadline - System.currentTimeMillis()).coerceAtLeast(1)) }
 
         val out = stdout.snapshot()
         val err = stderr.snapshot()
@@ -70,6 +84,17 @@ class ShellUserService : IShellService.Stub() {
         exitProcess(0)
     }
 
+    /** Reads the wrapper's first stderr line: the pid of the session/group leader running the command. */
+    private fun readPgid(stderr: InputStream): Int? {
+        val line = StringBuilder()
+        while (line.length < MAX_PID_LINE) {
+            val b = stderr.read()
+            if (b < 0 || b == '\n'.code) break
+            line.append(b.toChar())
+        }
+        return line.toString().toIntOrNull()
+    }
+
     private fun startReader(
         name: String,
         block: () -> Unit,
@@ -80,7 +105,10 @@ class ShellUserService : IShellService.Stub() {
         }
 
     private companion object {
+        // Under `setsid -w`, $$ is the new session's (and process group's) id. The command arrives as $0.
+        const val PGID_WRAPPER = "echo \$\$ >&2; exec sh -c \"\$0\""
+        const val MAX_PID_LINE = 16
         const val KILL_GRACE_MS = 1000L
-        const val READER_JOIN_MS = 2000L
+        const val READER_GRACE_MS = 1000L
     }
 }
