@@ -299,6 +299,8 @@ jobs:
     name: Build Release - ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
     # One runner per flavour so gms and foss assemble in parallel instead of one job
     # building all four APKs serially. fail-fast off: a foss break must not cancel gms.
     strategy:
@@ -319,7 +321,7 @@ jobs:
           # Full history + tags: build.gradle.kts derives versionName/versionCode from
           # git and fails configuration without them (no hardcoded fallback). On
           # pull_request runs this reflects the ephemeral merge ref, not the post-merge
-          # main commit; these artifacts are unsigned and never shipped.
+          # main commit.
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -389,6 +391,17 @@ jobs:
           path: .dbip-cache
           key: dbip-csv-${{ steps.dbip-month.outputs.month }}
 
+      # With the SIGNING_KEYSTORE_B64 secret set, both debug and release APKs are signed with
+      # that (Android debug-style) key, so successive builds install over each other. Without it
+      # (e.g. PRs from forks), debug uses the runner's throwaway key and release stays unsigned.
+      - name: Install signing key
+        if: env.SIGNING_KEYSTORE_B64 != ''
+        run: |
+          mkdir -p ~/.android
+          echo "$SIGNING_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+          printf 'storeFile=%s\nstorePassword=android\nkeyAlias=androiddebugkey\nkeyPassword=android\n' \
+            "$HOME/.android/debug.keystore" > keystore.properties
+
       - name: Build ${{ matrix.label }} debug + release APKs
         run: ./gradlew assemble${{ matrix.cap }}Debug assemble${{ matrix.cap }}Release
 
@@ -403,5 +416,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: app-${{ matrix.flavor }}-release
-          path: app/build/outputs/apk/${{ matrix.flavor }}/release/app-${{ matrix.flavor }}-release-unsigned.apk
+          path: app/build/outputs/apk/${{ matrix.flavor }}/release/app-${{ matrix.flavor }}-release*.apk
           retention-days: 30
