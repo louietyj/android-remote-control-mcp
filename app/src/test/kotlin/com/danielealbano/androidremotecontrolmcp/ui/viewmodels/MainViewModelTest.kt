@@ -18,6 +18,7 @@ import com.danielealbano.androidremotecontrolmcp.data.repository.SettingsReposit
 import com.danielealbano.androidremotecontrolmcp.mcp.oauth.OAuthApprovalCoordinator
 import com.danielealbano.androidremotecontrolmcp.mcp.oauth.PendingApproval
 import com.danielealbano.androidremotecontrolmcp.services.power.BatteryOptimizationManager
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuStatus
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
 import com.danielealbano.androidremotecontrolmcp.utils.PermissionUtils
@@ -1111,6 +1112,7 @@ class MainViewModelTest {
                 every { PermissionUtils.isMicrophonePermissionGranted(context) } returns false
                 every { PermissionUtils.isLocationPermissionGranted(context) } returns false
                 every { PermissionUtils.isNotificationListenerEnabled(context, any()) } returns true
+                every { PermissionUtils.shizukuStatus(context) } returns ShizukuStatus.GRANTED
                 coEvery { storageLocationProvider.getAllLocations() } returns emptyList()
                 mockkStatic(androidx.core.content.ContextCompat::class)
                 every {
@@ -1122,6 +1124,7 @@ class MainViewModelTest {
                 advanceUntilIdle()
 
                 assertEquals(true, viewModel.isNotificationListenerEnabled.value)
+                assertEquals(ShizukuStatus.GRANTED, viewModel.shizukuStatus.value)
             } finally {
                 unmockkStatic(androidx.core.content.ContextCompat::class)
                 unmockkObject(PermissionUtils)
@@ -1142,6 +1145,7 @@ class MainViewModelTest {
                 every { PermissionUtils.isMicrophonePermissionGranted(context) } returns false
                 every { PermissionUtils.isLocationPermissionGranted(context) } returns false
                 every { PermissionUtils.isNotificationListenerEnabled(context, any()) } returns false
+                every { PermissionUtils.shizukuStatus(context) } returns ShizukuStatus.NOT_INSTALLED
                 coEvery { storageLocationProvider.getAllLocations() } returns emptyList()
                 mockkStatic(androidx.core.content.ContextCompat::class)
                 every {
@@ -1175,6 +1179,7 @@ class MainViewModelTest {
                 every { PermissionUtils.isMicrophonePermissionGranted(context) } returns false
                 every { PermissionUtils.isLocationPermissionGranted(context) } returns false
                 every { PermissionUtils.isNotificationListenerEnabled(context, any()) } returns false
+                every { PermissionUtils.shizukuStatus(context) } returns ShizukuStatus.NOT_INSTALLED
                 coEvery { storageLocationProvider.getAllLocations() } returns emptyList()
                 every { batteryOptimizationManager.isIgnoringBatteryOptimizations() } returns false
 
@@ -1201,6 +1206,7 @@ class MainViewModelTest {
                 every { PermissionUtils.isMicrophonePermissionGranted(context) } returns false
                 every { PermissionUtils.isLocationPermissionGranted(context) } returns false
                 every { PermissionUtils.isNotificationListenerEnabled(context, any()) } returns false
+                every { PermissionUtils.shizukuStatus(context) } returns ShizukuStatus.NOT_INSTALLED
                 coEvery { storageLocationProvider.getAllLocations() } returns emptyList()
 
                 every { batteryOptimizationManager.isIgnoringBatteryOptimizations() } returns false

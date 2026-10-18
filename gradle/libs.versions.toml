@@ -16,6 +16,7 @@ documentfile = "1.1.0"
 camerax = "1.6.1"
 play-services-location = "21.4.0"
 osmdroid = "6.1.20"
+shizuku = "13.1.5"
 
 # Networking
 ktor = "3.5.2"
@@ -113,6 +114,10 @@ camerax-video = { group = "androidx.camera", name = "camera-video", version.ref 
 
 # Google Play Services
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
+
+# Shizuku
+shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
+shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 
 # OpenStreetMap
 osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }

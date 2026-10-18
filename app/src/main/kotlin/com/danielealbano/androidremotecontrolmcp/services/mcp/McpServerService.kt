@@ -40,6 +40,7 @@ import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerNodeActionToo
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerNotificationTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerScreenIntrospectionTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerSharingTools
+import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerShellTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerSystemActionTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerTextInputTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerTouchActionTools
@@ -72,6 +73,7 @@ import com.danielealbano.androidremotecontrolmcp.services.screencapture.Screensh
 import com.danielealbano.androidremotecontrolmcp.services.screencapture.ScreenshotRedactor
 import com.danielealbano.androidremotecontrolmcp.services.sharing.EphemeralFileLinkService
 import com.danielealbano.androidremotecontrolmcp.services.sharing.SharedContentInbox
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShellExecutor
 import com.danielealbano.androidremotecontrolmcp.services.storage.FileOperationProvider
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
@@ -176,6 +178,8 @@ class McpServerService : Service() {
     @Inject lateinit var placeholderSubstitutor: PlaceholderSubstitutor
 
     @Inject lateinit var screenshotRedactor: ScreenshotRedactor
+
+    @Inject lateinit var shellExecutor: ShellExecutor
 
     @Inject lateinit var privacyModeManager: PrivacyModeManager
 
@@ -290,7 +294,7 @@ class McpServerService : Service() {
                                 ),
                         ),
                 )
-            // ALL four signals MUST come from PermissionUtils — the SAME source the UI uses
+            // ALL five signals MUST come from PermissionUtils — the SAME source the UI uses
             // (MainViewModel.refreshPermissionStatus) — so the server-start gate and the settings grey-out
             // never diverge. Do NOT use cameraProvider.isCameraPermissionGranted()/isMicrophonePermissionGranted()
             // or notificationProvider.isReady() here.
@@ -304,6 +308,7 @@ class McpServerService : Service() {
                             this@McpServerService,
                             McpNotificationListenerService::class.java,
                         ),
+                    shizuku = PermissionUtils.shizukuStatus(this@McpServerService).isToolAvailable,
                 )
             val effectivePerms =
                 OptionalToolPermissions.effectivePermissions(config.toolPermissionsConfig, grantedOptionalPermissions)
@@ -468,6 +473,7 @@ class McpServerService : Service() {
             perms,
         )
         registerLocationTools(registrar, locationProvider, privacyToolGate, toolNamePrefix, perms)
+        registerShellTools(registrar, shellExecutor, privacyToolGate, placeholderSubstitutor, toolNamePrefix, perms)
         registerSharingBundle(registrar, toolNamePrefix, perms, fileSizeLimitMb)
     }
 
@@ -605,6 +611,9 @@ class McpServerService : Service() {
         }
         mcpServer = null
         serverActive.set(false)
+
+        // Kill the Shizuku shell process; it is rebound on the next server start's first call.
+        shellExecutor.release()
 
         // Cancel coroutine scope
         coroutineScope.cancel()

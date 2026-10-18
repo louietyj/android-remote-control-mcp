@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuAccess
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuStatus
 
 /**
  * Utility functions for checking and requesting Android permissions.
@@ -99,6 +101,9 @@ object PermissionUtils {
             context,
             Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
+
+    /** Shizuku state; gate the shell tool on [ShizukuStatus.isToolAvailable]. */
+    fun shizukuStatus(context: Context): ShizukuStatus = ShizukuAccess.status(context)
 
     /**
      * Checks whether a specific notification listener service is currently enabled.

@@ -34,6 +34,7 @@ import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerNodeActionToo
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerNotificationTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerScreenIntrospectionTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerSharingTools
+import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerShellTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerSystemActionTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerTextInputTools
 import com.danielealbano.androidremotecontrolmcp.mcp.tools.registerTouchActionTools
@@ -80,6 +81,7 @@ import com.danielealbano.androidremotecontrolmcp.services.screencapture.Screensh
 import com.danielealbano.androidremotecontrolmcp.services.screencapture.ScreenshotRedactor
 import com.danielealbano.androidremotecontrolmcp.services.sharing.EphemeralFileLinkService
 import com.danielealbano.androidremotecontrolmcp.services.sharing.SharedContentInbox
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShellExecutor
 import com.danielealbano.androidremotecontrolmcp.services.storage.FileOperationProvider
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import com.danielealbano.androidremotecontrolmcp.testutil.RecordingServerLogRepository
@@ -217,6 +219,7 @@ object McpIntegrationTestHelper {
             intentDispatcher = mockk(relaxed = true),
             notificationProvider = mockk(relaxed = true),
             locationProvider = mockk(relaxed = true),
+            shellExecutor = mockk(relaxed = true),
             sharedContentInbox = mockk(relaxed = true),
             ephemeralFileLinkService = mockk(relaxed = true),
             privacyStatusFlow = statusFlow,
@@ -345,6 +348,14 @@ object McpIntegrationTestHelper {
             perms,
         )
         registerLocationTools(registrar, deps.locationProvider, deps.privacyToolGate, toolNamePrefix, perms)
+        registerShellTools(
+            registrar,
+            deps.shellExecutor,
+            deps.privacyToolGate,
+            deps.placeholderSubstitutor,
+            toolNamePrefix,
+            perms,
+        )
         registerSharingTools(
             registrar,
             deps.sharedContentInbox,
@@ -608,6 +619,7 @@ data class MockDependencies(
     val intentDispatcher: IntentDispatcher,
     val notificationProvider: NotificationProvider,
     val locationProvider: LocationProvider,
+    val shellExecutor: ShellExecutor,
     val sharedContentInbox: SharedContentInbox,
     val ephemeralFileLinkService: EphemeralFileLinkService,
     val privacyStatusFlow: MutableStateFlow<PrivacyModeStatus>,

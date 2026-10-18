@@ -23,6 +23,8 @@ import com.danielealbano.androidremotecontrolmcp.services.accessibility.McpAcces
 import com.danielealbano.androidremotecontrolmcp.services.mcp.McpServerService
 import com.danielealbano.androidremotecontrolmcp.services.notifications.McpNotificationListenerService
 import com.danielealbano.androidremotecontrolmcp.services.power.BatteryOptimizationManager
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuAccess
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuStatus
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
 import com.danielealbano.androidremotecontrolmcp.utils.Logger
@@ -91,6 +93,9 @@ class MainViewModel
 
         private val _isNotificationListenerEnabled = MutableStateFlow(false)
         val isNotificationListenerEnabled: StateFlow<Boolean> = _isNotificationListenerEnabled.asStateFlow()
+
+        private val _shizukuStatus = MutableStateFlow(ShizukuStatus.NOT_INSTALLED)
+        val shizukuStatus: StateFlow<ShizukuStatus> = _shizukuStatus.asStateFlow()
 
         private val _tunnelStatus = MutableStateFlow<TunnelStatus>(TunnelStatus.Disconnected)
         val tunnelStatus: StateFlow<TunnelStatus> = _tunnelStatus.asStateFlow()
@@ -292,8 +297,16 @@ class MainViewModel
                     context,
                     McpNotificationListenerService::class.java,
                 )
+            _shizukuStatus.value = PermissionUtils.shizukuStatus(context)
             _isBatteryOptimizationIgnored.value = batteryOptimizationManager.isIgnoringBatteryOptimizations()
             refreshStorageLocations()
+        }
+
+        fun requestShizukuPermission(context: Context) {
+            val appContext = context.applicationContext
+            ShizukuAccess.requestPermission {
+                _shizukuStatus.value = PermissionUtils.shizukuStatus(appContext)
+            }
         }
 
         fun requestBatteryOptimizationExemption() {

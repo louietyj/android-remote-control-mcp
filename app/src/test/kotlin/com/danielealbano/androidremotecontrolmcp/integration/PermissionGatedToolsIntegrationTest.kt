@@ -83,6 +83,22 @@ class PermissionGatedToolsIntegrationTest {
         }
 
     @Test
+    fun `shell tool absent when shizuku not available`() =
+        runTest {
+            val granted = ALL - OptionalToolPermission.SHIZUKU
+
+            McpIntegrationTestHelper.withTestApplication(perms = permsFor(granted)) { client, _ ->
+                val toolNames =
+                    client
+                        .listTools()
+                        .tools
+                        .map { it.name }
+                        .toSet()
+                assertFalse(toolNames.contains("android_shell"), "android_shell should be hidden without Shizuku")
+            }
+        }
+
+    @Test
     fun `all optional tools present when all granted`() =
         runTest {
             McpIntegrationTestHelper.withTestApplication(perms = permsFor(ALL)) { client, _ ->
@@ -92,9 +108,10 @@ class PermissionGatedToolsIntegrationTest {
                         .tools
                         .map { it.name }
                         .toSet()
-                (PREFIXED_CAMERA_TOOLS + "android_get_location" + PREFIXED_NOTIFICATION_TOOLS).forEach { name ->
-                    assertTrue(toolNames.contains(name), "$name should be present when all optional perms granted")
-                }
+                (PREFIXED_CAMERA_TOOLS + "android_get_location" + PREFIXED_NOTIFICATION_TOOLS + "android_shell")
+                    .forEach { name ->
+                        assertTrue(toolNames.contains(name), "$name should be present when all optional perms granted")
+                    }
             }
         }
 

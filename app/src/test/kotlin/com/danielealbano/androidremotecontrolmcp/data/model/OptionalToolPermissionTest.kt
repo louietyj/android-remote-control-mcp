@@ -33,8 +33,8 @@ class OptionalToolPermissionTest {
     @Test
     fun `toolsMissingPermission returns all gated tools when none granted`() {
         val missing = OptionalToolPermissions.toolsMissingPermission(emptySet())
-        assertEquals(cameraTools + setOf("get_location") + notificationTools, missing)
-        assertEquals(13, missing.size)
+        assertEquals(cameraTools + setOf("get_location") + notificationTools + setOf("shell"), missing)
+        assertEquals(14, missing.size)
     }
 
     @Test
@@ -59,6 +59,12 @@ class OptionalToolPermissionTest {
         val missing =
             OptionalToolPermissions.toolsMissingPermission(all - OptionalToolPermission.NOTIFICATION_LISTENER)
         assertEquals(notificationTools, missing)
+    }
+
+    @Test
+    fun `missing shizuku hides only shell`() {
+        val missing = OptionalToolPermissions.toolsMissingPermission(all - OptionalToolPermission.SHIZUKU)
+        assertEquals(setOf("shell"), missing)
     }
 
     @Test
@@ -99,6 +105,7 @@ class OptionalToolPermissionTest {
             OptionalToolPermission.NOTIFICATION_LISTENER,
             OptionalToolPermissions.permissionForTool("notification_list"),
         )
+        assertEquals(OptionalToolPermission.SHIZUKU, OptionalToolPermissions.permissionForTool("shell"))
     }
 
     @Test
@@ -115,7 +122,8 @@ class OptionalToolPermissionTest {
         microphone: Boolean = false,
         location: Boolean = false,
         notificationListener: Boolean = false,
-    ): Set<OptionalToolPermission> = grantedPermissions(camera, microphone, location, notificationListener)
+        shizuku: Boolean = false,
+    ): Set<OptionalToolPermission> = grantedPermissions(camera, microphone, location, notificationListener, shizuku)
 
     @Test
     fun `grantedPermissions maps booleans to enum set`() {
@@ -123,7 +131,11 @@ class OptionalToolPermissionTest {
         assertEquals(setOf(OptionalToolPermission.MICROPHONE), granted(microphone = true))
         assertEquals(setOf(OptionalToolPermission.LOCATION), granted(location = true))
         assertEquals(setOf(OptionalToolPermission.NOTIFICATION_LISTENER), granted(notificationListener = true))
-        assertEquals(all, granted(camera = true, microphone = true, location = true, notificationListener = true))
+        assertEquals(setOf(OptionalToolPermission.SHIZUKU), granted(shizuku = true))
+        assertEquals(
+            all,
+            granted(camera = true, microphone = true, location = true, notificationListener = true, shizuku = true),
+        )
         assertTrue(granted().isEmpty())
     }
 

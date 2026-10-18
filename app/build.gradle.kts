@@ -275,6 +275,7 @@ android {
     }
 
     buildFeatures {
+        aidl = true
         buildConfig = true
         compose = true
     }
@@ -352,6 +353,10 @@ dependencies {
 
     // OpenStreetMap
     implementation(libs.osmdroid)
+
+    // Shizuku (shell tool)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     // Ktor Server
     implementation(libs.ktor.server.core)

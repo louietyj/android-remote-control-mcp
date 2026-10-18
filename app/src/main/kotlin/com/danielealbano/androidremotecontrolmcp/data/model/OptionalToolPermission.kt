@@ -6,6 +6,7 @@ enum class OptionalToolPermission {
     LOCATION,
     NOTIFICATION_LISTENER,
     MICROPHONE,
+    SHIZUKU,
 }
 
 /** Single source of truth mapping each optional permission to the tools (or params) it gates. */
@@ -32,6 +33,7 @@ object OptionalToolPermissions {
                     "notification_action",
                     "notification_reply",
                 ),
+            OptionalToolPermission.SHIZUKU to setOf("shell"),
         )
 
     /** Param-level gates: permission -> (toolName -> paramNames). */
@@ -83,12 +85,14 @@ object OptionalToolPermissions {
         microphone: Boolean,
         location: Boolean,
         notificationListener: Boolean,
+        shizuku: Boolean,
     ): Set<OptionalToolPermission> =
         buildSet {
             if (camera) add(OptionalToolPermission.CAMERA)
             if (microphone) add(OptionalToolPermission.MICROPHONE)
             if (location) add(OptionalToolPermission.LOCATION)
             if (notificationListener) add(OptionalToolPermission.NOTIFICATION_LISTENER)
+            if (shizuku) add(OptionalToolPermission.SHIZUKU)
         }
 
     /**

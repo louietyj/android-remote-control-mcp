@@ -111,6 +111,9 @@
     <string name="permission_microphone">Microphone</string>
     <string name="permission_notification_listener">Notification Listener</string>
     <string name="permission_location">Location</string>
+    <string name="permission_shizuku">Shizuku</string>
+    <string name="permission_shizuku_open">Open Shizuku</string>
+    <string name="permission_shizuku_not_installed">Not installed</string>
 
     <!-- Permissions screen: section headers -->
     <string name="permission_section_required_title">Required</string>
@@ -126,6 +129,7 @@
     <string name="permission_camera_rationale">Take photos and record video.</string>
     <string name="permission_location_rationale">Read GPS position.</string>
     <string name="permission_microphone_rationale">Adds audio to recorded video.</string>
+    <string name="permission_shizuku_rationale">Run adb shell commands (shell tool). Requires the Shizuku app to be running.</string>
 
     <!-- Permission Warning (main screen: accessibility is the one required permission) -->
     <string name="permission_warning_title">Accessibility permission required</string>

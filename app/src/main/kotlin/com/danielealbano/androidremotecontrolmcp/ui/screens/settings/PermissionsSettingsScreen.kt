@@ -45,6 +45,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.danielealbano.androidremotecontrolmcp.R
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuAccess
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuStatus
 import com.danielealbano.androidremotecontrolmcp.ui.viewmodels.MainViewModel
 import com.danielealbano.androidremotecontrolmcp.utils.PermissionUtils
 
@@ -74,6 +76,7 @@ fun PermissionsSettingsScreen(
     val isCameraPermissionGranted by viewModel.isCameraPermissionGranted.collectAsStateWithLifecycle()
     val isMicrophonePermissionGranted by viewModel.isMicrophonePermissionGranted.collectAsStateWithLifecycle()
     val isLocationPermissionGranted by viewModel.isLocationPermissionGranted.collectAsStateWithLifecycle()
+    val shizukuStatus by viewModel.shizukuStatus.collectAsStateWithLifecycle()
 
     // Refresh permissions on ON_RESUME
     DisposableEffect(lifecycleOwner) {
@@ -218,8 +221,44 @@ fun PermissionsSettingsScreen(
                 onAction = onRequestMicrophonePermission,
                 actionEnabled = !isMicrophonePermissionGranted,
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ShizukuPermissionRow(
+                status = shizukuStatus,
+                onRequestPermission = { viewModel.requestShizukuPermission(context) },
+                onOpenShizuku = { ShizukuAccess.openManagerApp(context) },
+            )
         }
     }
+}
+
+@Composable
+private fun ShizukuPermissionRow(
+    status: ShizukuStatus,
+    onRequestPermission: () -> Unit,
+    onOpenShizuku: () -> Unit,
+) {
+    PermissionRow(
+        label = stringResource(R.string.permission_shizuku),
+        rationale = stringResource(R.string.permission_shizuku_rationale),
+        isEnabled = status == ShizukuStatus.GRANTED,
+        buttonText =
+            when (status) {
+                ShizukuStatus.GRANTED -> stringResource(R.string.permission_granted)
+                ShizukuStatus.NOT_GRANTED -> stringResource(R.string.permission_grant)
+                ShizukuStatus.NOT_RUNNING -> stringResource(R.string.permission_shizuku_open)
+                ShizukuStatus.NOT_INSTALLED -> stringResource(R.string.permission_shizuku_not_installed)
+            },
+        onAction = {
+            when (status) {
+                ShizukuStatus.NOT_GRANTED -> onRequestPermission()
+                ShizukuStatus.NOT_RUNNING -> onOpenShizuku()
+                ShizukuStatus.GRANTED, ShizukuStatus.NOT_INSTALLED -> Unit
+            }
+        },
+        actionEnabled = status == ShizukuStatus.NOT_GRANTED || status == ShizukuStatus.NOT_RUNNING,
+    )
 }
 
 @Composable

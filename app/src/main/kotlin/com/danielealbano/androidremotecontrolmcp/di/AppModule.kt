@@ -53,6 +53,8 @@ import com.danielealbano.androidremotecontrolmcp.services.sharing.EphemeralFileL
 import com.danielealbano.androidremotecontrolmcp.services.sharing.EphemeralFileLinkServiceImpl
 import com.danielealbano.androidremotecontrolmcp.services.sharing.SharedContentInbox
 import com.danielealbano.androidremotecontrolmcp.services.sharing.SharedContentInboxImpl
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShellExecutor
+import com.danielealbano.androidremotecontrolmcp.services.shell.ShizukuShellExecutor
 import com.danielealbano.androidremotecontrolmcp.services.storage.FileOperationProvider
 import com.danielealbano.androidremotecontrolmcp.services.storage.FileOperationProviderImpl
 import com.danielealbano.androidremotecontrolmcp.services.storage.MediaStoreFileOperations
@@ -238,6 +240,10 @@ abstract class ServiceModule {
     @Binds
     @Singleton
     abstract fun bindPermissionChecker(impl: PermissionCheckerImpl): PermissionChecker
+
+    @Binds
+    @Singleton
+    abstract fun bindShellExecutor(impl: ShizukuShellExecutor): ShellExecutor
 
     // LocationProvider is bound per-flavor (Fused in gms / LocationManager in foss) — see
     // GmsLocationModule / FossLocationModule.

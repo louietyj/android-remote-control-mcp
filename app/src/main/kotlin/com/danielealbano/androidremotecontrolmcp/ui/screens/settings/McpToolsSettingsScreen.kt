@@ -201,6 +201,12 @@ private val ALL_TOOL_CATEGORIES: List<ToolCategory> =
                 ToolEntry("share_file_via_web", "Share File via Web"),
             ),
         ),
+        ToolCategory(
+            "Shell (Shizuku)",
+            listOf(
+                ToolEntry("shell", "Shell"),
+            ),
+        ),
     )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -219,6 +225,7 @@ fun McpToolsSettingsScreen(
     val locationGranted by viewModel.isLocationPermissionGranted.collectAsStateWithLifecycle()
     val notificationListenerGranted by viewModel.isNotificationListenerEnabled.collectAsStateWithLifecycle()
     val microphoneGranted by viewModel.isMicrophonePermissionGranted.collectAsStateWithLifecycle()
+    val shizukuStatus by viewModel.shizukuStatus.collectAsStateWithLifecycle()
     val controlsEnabled = serverStatus !is ServerStatus.Running && serverStatus !is ServerStatus.Starting
 
     // Refresh permissions on ON_RESUME — SAME pattern as PermissionsSettingsScreen.
@@ -240,6 +247,7 @@ fun McpToolsSettingsScreen(
             location = locationGranted,
             notificationListener = notificationListenerGranted,
             microphone = microphoneGranted,
+            shizuku = shizukuStatus.isToolAvailable,
         )
     }
 
@@ -296,12 +304,14 @@ private fun isPermissionGranted(
     location: Boolean,
     notificationListener: Boolean,
     microphone: Boolean,
+    shizuku: Boolean,
 ): Boolean =
     when (permission) {
         OptionalToolPermission.CAMERA -> camera
         OptionalToolPermission.LOCATION -> location
         OptionalToolPermission.NOTIFICATION_LISTENER -> notificationListener
         OptionalToolPermission.MICROPHONE -> microphone
+        OptionalToolPermission.SHIZUKU -> shizuku
     }
 
 @Composable
