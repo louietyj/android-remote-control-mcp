@@ -156,7 +156,9 @@ jobs:
 
   test-e2e:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    # Pinned: redroid needs binder_linux from linux-modules-extra, which the Ubuntu 26
+    # runner image (ubuntu-latest since 2026-10-19) doesn't ship for its azure kernel.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Checkout
