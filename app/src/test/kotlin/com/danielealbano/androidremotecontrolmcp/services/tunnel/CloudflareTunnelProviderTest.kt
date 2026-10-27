@@ -446,6 +446,86 @@ class CloudflareTunnelProviderTest {
             }
     }
 
+    /**
+     * Fake cloudflared that appends a line to [launchesFile] on every launch and SIGKILLs itself
+     * (exit 137, like Android's phantom process killer) on launches up to [killThrough]; later
+     * launches register and block like the real binary.
+     */
+    private fun fakeBinaryKilledOnLaunches(
+        launchesFile: File,
+        killThrough: Int,
+    ): String {
+        val script = File.createTempFile("fake-cloudflared", ".sh")
+        script.deleteOnExit()
+        val target = launchesFile.absolutePath
+        script.writeText(
+            "#!/bin/sh\n" +
+                "echo launch >> \"$target\"\n" +
+                "if [ \"\$(wc -l < \"$target\")\" -le $killThrough ]; then kill -9 \$\$; fi\n" +
+                "printf '%s\\n' '$registeredLine' >&2\n" +
+                "sleep 60\n",
+        )
+        script.setExecutable(true)
+        return script.absolutePath
+    }
+
+    private fun newLaunchesFile(): File =
+        File.createTempFile("cloudflared-launches", ".txt").also {
+            it.deleteOnExit()
+            it.writeText("")
+        }
+
+    @Nested
+    @DisplayName("restart on unexpected exit")
+    inner class RestartOnUnexpectedExit {
+        @Test
+        fun `restartDelayMs doubles from the minimum and caps at the maximum`() {
+            assertEquals(
+                listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 60_000L, 60_000L),
+                listOf(0, 1, 2, 3, 4, 5, 6, 100).map { CloudflareTunnelProvider.restartDelayMs(it) },
+            )
+            assertEquals(1_000L, CloudflareTunnelProvider.restartDelayMs(-1))
+        }
+
+        @Test
+        fun `killed process is restarted and reconnects`() =
+            runBlocking {
+                val launches = newLaunchesFile()
+                every { mockBinaryResolver.resolve() } returns fakeBinaryKilledOnLaunches(launches, killThrough = 1)
+                val provider = createProvider()
+
+                provider.start(8080, tokenConfig())
+                val error = provider.awaitStatus { it is TunnelStatus.Error }
+                provider.awaitStatus { it is TunnelStatus.Connected }
+
+                assertEquals(
+                    "cloudflared process exited unexpectedly (code 137); restarting in 1s",
+                    (error as TunnelStatus.Error).message,
+                )
+                assertEquals(2, launches.readLines().size)
+                provider.stop()
+            }
+
+        @Test
+        fun `repeated kills back off and stop cancels the pending restart`() =
+            runBlocking {
+                val launches = newLaunchesFile()
+                every { mockBinaryResolver.resolve() } returns
+                    fakeBinaryKilledOnLaunches(launches, killThrough = Int.MAX_VALUE)
+                val provider = createProvider()
+
+                provider.start(8080, tokenConfig())
+                provider.awaitStatus { it is TunnelStatus.Error && it.message.endsWith("restarting in 2s") }
+                provider.stop()
+                val launchesAtStop = launches.readLines().size
+                delay(RESTART_SETTLE_MS)
+
+                assertEquals(TunnelStatus.Disconnected, provider.status.value)
+                assertEquals(2, launchesAtStop)
+                assertEquals(launchesAtStop, launches.readLines().size)
+            }
+    }
+
     @Nested
     @DisplayName("parseCommandLineArguments")
     inner class ParseCommandLineArguments {
@@ -633,6 +713,9 @@ class CloudflareTunnelProviderTest {
     companion object {
         private const val AWAIT_TIMEOUT_MS = 10_000L
         private const val ARGS_POLL_INTERVAL_MS = 50L
+
+        /** Longer than the pending 2s backoff plus the monitor's 1s start delay. */
+        private const val RESTART_SETTLE_MS = 3_500L
 
         /** True for a Connected status that already carries at least one endpoint (route applied). */
         private fun TunnelStatus.connectedWithEndpoints() = this is TunnelStatus.Connected && endpoints.isNotEmpty()

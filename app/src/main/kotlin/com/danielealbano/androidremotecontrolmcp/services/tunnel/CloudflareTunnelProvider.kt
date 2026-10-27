@@ -10,7 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +61,11 @@ class CloudflareTunnelProvider
         private var stderrReaderJob: Job? = null
         private var processMonitorJob: Job? = null
 
+        // Kept from the initial start so the exit monitor can relaunch the same tunnel.
+        private var launchArgs: List<String> = emptyList()
+        private var lineHandler: (String) -> Unit = {}
+        private var restartAttempt = 0
+
         override suspend fun start(
             localPort: Int,
             config: ServerConfig,
@@ -84,44 +91,29 @@ class CloudflareTunnelProvider
             localPort: Int,
             config: ServerConfig,
         ) {
-            _status.value = TunnelStatus.Connecting
-            try {
-                val args =
-                    mutableListOf(
-                        binaryPath,
-                        "tunnel",
-                        "--url",
-                        "http://localhost:$localPort",
-                        "--output",
-                        "json",
-                    )
-                if (config.cloudflareTunnelExtraArgs.isNotBlank()) {
-                    args.addAll(parseCommandLineArguments(config.cloudflareTunnelExtraArgs))
+            val args =
+                mutableListOf(
+                    binaryPath,
+                    "tunnel",
+                    "--url",
+                    "http://localhost:$localPort",
+                    "--output",
+                    "json",
+                )
+            if (config.cloudflareTunnelExtraArgs.isNotBlank()) {
+                args.addAll(parseCommandLineArguments(config.cloudflareTunnelExtraArgs))
+            }
+            launchInitial(args) { line ->
+                val match = TUNNEL_URL_REGEX.find(line)
+                if (match != null && _status.value is TunnelStatus.Connecting) {
+                    val url = match.value
+                    Log.i(TAG, "Cloudflare tunnel URL: $url")
+                    _status.value =
+                        TunnelStatus.Connected(
+                            endpoints = listOf(TunnelEndpoint(url = url, valid = true)),
+                            providerType = TunnelProviderType.CLOUDFLARE,
+                        )
                 }
-                val pb = ProcessBuilder(args)
-                pb.redirectErrorStream(false)
-                val proc = pb.start()
-                process = proc
-
-                launchStderrReader(proc) { line ->
-                    val match = TUNNEL_URL_REGEX.find(line)
-                    if (match != null && _status.value is TunnelStatus.Connecting) {
-                        val url = match.value
-                        Log.i(TAG, "Cloudflare tunnel URL: $url")
-                        _status.value =
-                            TunnelStatus.Connected(
-                                endpoints = listOf(TunnelEndpoint(url = url, valid = true)),
-                                providerType = TunnelProviderType.CLOUDFLARE,
-                            )
-                    }
-                }
-                startProcessMonitor(proc)
-            } catch (
-                @Suppress("TooGenericExceptionCaught") e: Exception,
-            ) {
-                Log.e(TAG, "Failed to start cloudflared process", e)
-                _status.value = TunnelStatus.Error("Failed to start cloudflared: ${e.message}")
-                process = null
             }
         }
 
@@ -135,30 +127,35 @@ class CloudflareTunnelProvider
                 return
             }
 
+            // NOTE: exact argument order; `--output json` MUST come before `run`, and `--url`
+            // MUST NOT be passed (it breaks the control stream of a remotely-managed tunnel).
+            val args =
+                mutableListOf(
+                    binaryPath,
+                    "tunnel",
+                    "--output",
+                    "json",
+                    "run",
+                    "--token",
+                    config.cloudflareTunnelToken,
+                )
+            if (config.cloudflareTunnelExtraArgs.isNotBlank()) {
+                args.addAll(parseCommandLineArguments(config.cloudflareTunnelExtraArgs))
+            }
+            launchInitial(args) { line -> handleTokenLine(line, localPort) }
+        }
+
+        /** A failure to launch here is terminal; only a process that started and later died is restarted. */
+        private fun launchInitial(
+            args: List<String>,
+            onLine: (String) -> Unit,
+        ) {
+            launchArgs = args
+            lineHandler = onLine
+            restartAttempt = 0
             _status.value = TunnelStatus.Connecting
             try {
-                // NOTE: exact argument order; `--output json` MUST come before `run`, and `--url`
-                // MUST NOT be passed (it breaks the control stream of a remotely-managed tunnel).
-                val args =
-                    mutableListOf(
-                        binaryPath,
-                        "tunnel",
-                        "--output",
-                        "json",
-                        "run",
-                        "--token",
-                        config.cloudflareTunnelToken,
-                    )
-                if (config.cloudflareTunnelExtraArgs.isNotBlank()) {
-                    args.addAll(parseCommandLineArguments(config.cloudflareTunnelExtraArgs))
-                }
-                val pb = ProcessBuilder(args)
-                pb.redirectErrorStream(false)
-                val proc = pb.start()
-                process = proc
-
-                launchStderrReader(proc) { line -> handleTokenLine(line, localPort) }
-                startProcessMonitor(proc)
+                launchProcess()
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception,
             ) {
@@ -166,6 +163,17 @@ class CloudflareTunnelProvider
                 _status.value = TunnelStatus.Error("Failed to start cloudflared: ${e.message}")
                 process = null
             }
+        }
+
+        /** Caller holds [mutex]. */
+        private fun launchProcess() {
+            val pb = ProcessBuilder(launchArgs)
+            pb.redirectErrorStream(false)
+            val proc = pb.start()
+            process = proc
+
+            launchStderrReader(proc, lineHandler)
+            startProcessMonitor(proc)
         }
 
         /**
@@ -210,17 +218,19 @@ class CloudflareTunnelProvider
 
         override suspend fun stop() {
             mutex.withLock {
-                val proc = process ?: return
+                // Cancel the monitor even when no process is alive: it may be waiting out a restart backoff.
                 stderrReaderJob?.cancel()
                 stderrReaderJob = null
                 processMonitorJob?.cancel()
                 processMonitorJob = null
 
-                proc.destroy()
-                withTimeoutOrNull(SHUTDOWN_TIMEOUT_MS) {
-                    @Suppress("BlockingMethodInNonBlockingContext")
-                    proc.waitFor()
-                } ?: proc.destroyForcibly()
+                process?.let { proc ->
+                    proc.destroy()
+                    withTimeoutOrNull(SHUTDOWN_TIMEOUT_MS) {
+                        @Suppress("BlockingMethodInNonBlockingContext")
+                        proc.waitFor()
+                    } ?: proc.destroyForcibly()
+                }
 
                 process = null
                 _status.value = TunnelStatus.Disconnected
@@ -257,7 +267,9 @@ class CloudflareTunnelProvider
                 }
         }
 
+        /** Restarts [proc] when it dies: Android's phantom process killer routinely SIGKILLs it (exit 137). */
         private fun startProcessMonitor(proc: Process) {
+            val startedAtMs = System.currentTimeMillis()
             processMonitorJob =
                 scope.launch {
                     // Give the process a moment to start before monitoring exit
@@ -268,15 +280,36 @@ class CloudflareTunnelProvider
 
                     if (isActive && _status.value !is TunnelStatus.Disconnected) {
                         Log.w(TAG, "cloudflared process exited unexpectedly with code $exitCode")
-                        _status.value =
-                            TunnelStatus.Error(
-                                "cloudflared process exited unexpectedly (code $exitCode)",
-                            )
                         mutex.withLock {
                             process = null
                         }
+                        if (System.currentTimeMillis() - startedAtMs >= RESTART_BACKOFF_RESET_MS) {
+                            restartAttempt = 0
+                        }
+                        restartWithBackoff("cloudflared process exited unexpectedly (code $exitCode)")
                     }
                 }
+        }
+
+        /** Returns once a relaunch succeeds; the new process gets its own monitor job. */
+        private suspend fun restartWithBackoff(initialReason: String) {
+            var reason = initialReason
+            while (true) {
+                val delayMs = restartDelayMs(restartAttempt)
+                restartAttempt++
+                _status.value = TunnelStatus.Error("$reason; restarting in ${delayMs / MS_PER_SECOND}s")
+                delay(delayMs)
+
+                val failure =
+                    mutex.withLock {
+                        currentCoroutineContext().ensureActive()
+                        _status.value = TunnelStatus.Connecting
+                        runCatching { launchProcess() }.onFailure { process = null }.exceptionOrNull()
+                    } ?: return
+
+                Log.e(TAG, "Failed to restart cloudflared process", failure)
+                reason = "Failed to restart cloudflared: ${failure.message}"
+            }
         }
 
         /** A Cloudflare ingress rule that declares a public hostname. */
@@ -291,9 +324,23 @@ class CloudflareTunnelProvider
                 Regex("https://[-a-zA-Z0-9]+\\.trycloudflare\\.com")
             internal const val SHUTDOWN_TIMEOUT_MS = 5_000L
             private const val PROCESS_MONITOR_INITIAL_DELAY_MS = 1_000L
+            private const val RESTART_MIN_DELAY_MS = 1_000L
+            private const val RESTART_MAX_DELAY_MS = 60_000L
+            private const val RESTART_MAX_DOUBLINGS = 6
+
+            /** A process that stayed up this long was healthy, so its restart starts back at the minimum delay. */
+            private const val RESTART_BACKOFF_RESET_MS = 60_000L
+            private const val MS_PER_SECOND = 1_000L
             internal const val MSG_REGISTERED = "Registered tunnel connection"
             internal const val MSG_UPDATED_CONFIG = "Updated to new configuration"
             internal val LOG_JSON = Json { ignoreUnknownKeys = true }
+
+            /** 1s, 2s, 4s, … capped at 60s. */
+            internal fun restartDelayMs(attempt: Int): Long =
+                minOf(
+                    RESTART_MIN_DELAY_MS shl attempt.coerceIn(0, RESTART_MAX_DOUBLINGS),
+                    RESTART_MAX_DELAY_MS,
+                )
 
             /** Returns the top-level `message` field of a cloudflared JSON log line, or null for non-JSON. */
             internal fun logMessageOf(line: String): String? =
