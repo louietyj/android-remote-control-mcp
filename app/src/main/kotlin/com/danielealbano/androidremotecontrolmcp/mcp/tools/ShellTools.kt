@@ -85,7 +85,9 @@ class ShellHandler
                         "no streaming: use non-blocking forms (e.g. `logcat -d`, not `logcat`); a command " +
                         "still running at timeout_ms is killed. Host-side adb verbs (install, push, pull) " +
                         "are not available; use on-device equivalents (`pm install /sdcard/x.apk`, `cp`, " +
-                        "`cat`). Requires Shizuku to be running and to have granted this app access.",
+                        "`cat`). `curl` is on PATH (bundled, using Android's DNS and CA store), so " +
+                        "`curl -fsSLo /data/local/tmp/x.apk <url> && pm install -r /data/local/tmp/x.apk` " +
+                        "works. Requires Shizuku to be running and to have granted this app access.",
                 inputSchema =
                     ToolSchema(
                         properties =

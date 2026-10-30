@@ -4,3 +4,6 @@
 [submodule "vendor/ngrok-java"]
 	path = vendor/ngrok-java
 	url = https://github.com/danielealbano/ngrok-java.git
+[submodule "vendor/curl-android"]
+	path = vendor/curl-android
+	url = https://github.com/vvb2060/curl-android.git

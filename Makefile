@@ -6,7 +6,7 @@
         logs logs-clear \
         build-release-bundle \
         version-bump-patch version-bump-minor version-bump-major \
-        compile-cloudflared compile-ngrok-native check-so-alignment \
+        compile-cloudflared compile-curl compile-ngrok-native check-so-alignment \
         all ci
 
 # Variables
@@ -119,16 +119,16 @@ update-deps: ## Update version catalog with latest stable versions (interactive)
 # Build
 # ─────────────────────────────────────────────────────────────────────────────
 
-build: compile-cloudflared compile-ngrok-native ## Build gms debug APK
+build: compile-cloudflared compile-curl compile-ngrok-native ## Build gms debug APK
 	$(GRADLE) assembleGmsDebug
 
-build-foss: compile-cloudflared compile-ngrok-native ## Build foss (F-Droid) debug APK
+build-foss: compile-cloudflared compile-curl compile-ngrok-native ## Build foss (F-Droid) debug APK
 	$(GRADLE) assembleFossDebug
 
-build-release: compile-cloudflared compile-ngrok-native ## Build gms + foss release APKs
+build-release: compile-cloudflared compile-curl compile-ngrok-native ## Build gms + foss release APKs
 	$(GRADLE) assembleGmsRelease assembleFossRelease
 
-build-release-bundle: compile-cloudflared compile-ngrok-native ## Build signed gms release AAB for Google Play upload
+build-release-bundle: compile-cloudflared compile-curl compile-ngrok-native ## Build signed gms release AAB for Google Play upload
 	@test -f keystore.properties || { \
 		echo "ERROR: keystore.properties not found — the AAB would be UNSIGNED and rejected by Google Play."; \
 		echo "Create it from keystore.properties.example first."; \
@@ -371,6 +371,30 @@ compile-cloudflared: ## Cross-compile cloudflared for Android (requires Go + And
 		./cmd/cloudflared
 	@echo ""
 	@echo "cloudflared compiled successfully for arm64-v8a and x86_64"
+
+# curl for the shell tool: vvb2060/curl-android links it against bionic, so it uses Android's
+# own DNS and CA store (static musl builds can't resolve names: Android has no /etc/resolv.conf).
+# Its Gradle project builds the tool as libcurl.so inside an APK; we take it from there.
+CURL_SRC_DIR := vendor/curl-android
+CURL_NATIVE_DIR := $(CURL_SRC_DIR)/curl/src/main/native
+CURL_JNILIBS_DIR := app/src/main/jniLibs
+
+compile-curl: ## Build the curl tool for Android from vendor/curl-android (requires JDK 21 + Android SDK)
+	@if [ ! -f "$(CURL_NATIVE_DIR)/curl/src/tool_main.c" ]; then \
+		echo "ERROR: curl-android submodule not initialized."; \
+		echo "Run: git submodule update --init --recursive vendor/curl-android"; \
+		exit 1; \
+	fi
+	cp $(CURL_NATIVE_DIR)/config/versions/nghttp2ver.h $(CURL_NATIVE_DIR)/nghttp2/lib/includes/nghttp2/nghttp2ver.h
+	cp $(CURL_NATIVE_DIR)/config/versions/nghttp3ver.h $(CURL_NATIVE_DIR)/nghttp3/lib/includes/nghttp3/version.h
+	cp $(CURL_NATIVE_DIR)/config/versions/ngtcp2ver.h $(CURL_NATIVE_DIR)/ngtcp2/lib/includes/ngtcp2/version.h
+	echo '#include "tool_hugehelp.h"' > $(CURL_NATIVE_DIR)/curl/src/tool_hugehelp.c
+	cd $(CURL_SRC_DIR) && ./gradlew --no-daemon :t:assembleRelease
+	@for abi in arm64-v8a x86_64; do \
+		mkdir -p $(CURL_JNILIBS_DIR)/$$abi && \
+		unzip -o -j -q $(CURL_SRC_DIR)/tool/build/outputs/apk/release/tool-release.apk "lib/$$abi/libcurl.so" -d $(CURL_JNILIBS_DIR)/$$abi || exit 1; \
+	done
+	@echo "curl compiled successfully for arm64-v8a and x86_64"
 
 NGROK_SRC_DIR := vendor/ngrok-java
 NGROK_NATIVE_DIR := $(NGROK_SRC_DIR)/ngrok-java-native

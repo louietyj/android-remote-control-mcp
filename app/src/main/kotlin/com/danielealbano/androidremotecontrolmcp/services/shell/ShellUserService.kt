@@ -1,11 +1,14 @@
 package com.danielealbano.androidremotecontrolmcp.services.shell
 
+import android.content.Context
 import android.os.Bundle
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
+import android.util.Log
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -24,15 +27,32 @@ object ShellResultKeys {
  * Shizuku UserService, instantiated by Shizuku in its own shell-uid (or root) process, so it
  * MUST NOT depend on Hilt or the app's Application.
  */
-class ShellUserService : IShellService.Stub() {
+class ShellUserService(
+    private val nativeLibDir: String?,
+) : IShellService.Stub() {
+    // Shizuku prefers the Context constructor; the no-arg one is its fallback, and runs without bundled tools.
+    constructor(context: Context) : this(context.applicationInfo.nativeLibraryDir)
+
+    constructor() : this(null)
+
+    // Tools already warned about, so a build without them doesn't log on every command.
+    private val unlinked = ConcurrentHashMap.newKeySet<String>()
+
     override fun exec(
         command: String,
         timeoutMs: Long,
         maxOutputBytes: Int,
     ): Bundle {
+        val builder = ProcessBuilder("setsid", "-w", "sh", "-c", PGID_WRAPPER, command)
+        if (nativeLibDir != null) {
+            BundledTools.link(nativeLibDir).filter { unlinked.add(it) }.forEach {
+                Log.w(TAG, "Bundled tool not available on PATH: $it")
+            }
+            builder.environment().compute("PATH") { _, current -> BundledTools.path(current) }
+        }
         val process =
             try {
-                ProcessBuilder("setsid", "-w", "sh", "-c", PGID_WRAPPER, command).start()
+                builder.start()
             } catch (e: IOException) {
                 // Binder only marshals a few exception types; IllegalStateException is one of them.
                 throw IllegalStateException("Failed to start sh: ${e.message}", e)
@@ -105,6 +125,8 @@ class ShellUserService : IShellService.Stub() {
         }
 
     private companion object {
+        const val TAG = "MCP:ShellUserService"
+
         // Under `setsid -w`, $$ is the new session's (and process group's) id. The command arrives as $0.
         const val PGID_WRAPPER = "echo \$\$ >&2; exec sh -c \"\$0\""
         const val MAX_PID_LINE = 16

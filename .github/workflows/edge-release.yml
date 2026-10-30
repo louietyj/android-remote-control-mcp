@@ -224,6 +224,37 @@ jobs:
           JAVA_11_HOME: ${{ env.JAVA_HOME }}
           JAVA_17_HOME: ${{ env.JAVA_HOME }}
 
+      - name: Resolve curl-android revision
+        id: curl-rev
+        run: echo "sha=$(git rev-parse HEAD:vendor/curl-android)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache curl Android native
+        id: cache-curl
+        uses: actions/cache@v6
+        with:
+          path: |
+            app/src/main/jniLibs/arm64-v8a/libcurl.so
+            app/src/main/jniLibs/x86_64/libcurl.so
+          key: curl-android-${{ runner.os }}-${{ steps.curl-rev.outputs.sha }}-${{ hashFiles('Makefile') }}
+
+      # curl-android's Gradle project targets Java 21. Listing 17 last keeps it the default JAVA_HOME.
+      - name: Set up JDK 21 for curl-android
+        if: steps.cache-curl.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: |
+            21
+            17
+
+      - name: Compile curl for Android
+        if: steps.cache-curl.outputs.cache-hit != 'true'
+        run: |
+          git submodule update --init --recursive --depth 1 vendor/curl-android
+          make compile-curl
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+
       # ── 5. Geolocation DB toolchain (generated at build time from DB-IP City Lite) ──
       - name: Set up Python (geolocation DB generator)
         uses: actions/setup-python@v7
